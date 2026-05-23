@@ -6,10 +6,10 @@
 
 ARCH          ?= arm64
 CROSS_COMPILE ?= aarch64-poky-linux-
-# module.bbclass passes KERNEL_PATH; local builds pass KERNELDIR directly.
-KERNELDIR     ?= $(KERNEL_PATH)
+# module.bbclass passes KERNEL_SRC; local builds pass KERNELDIR directly.
+KERNELDIR     ?= $(KERNEL_SRC)
 ifeq ($(KERNELDIR),)
-$(error Set KERNELDIR (or KERNEL_PATH) to the RPi kernel build tree)
+$(error Set KERNELDIR (or KERNEL_SRC) to the RPi kernel build tree)
 endif
 
 obj-m := cirthfb.o

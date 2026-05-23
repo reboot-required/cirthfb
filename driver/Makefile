@@ -17,6 +17,9 @@ obj-m := cirthfb.o
 all:
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
 
+modules_install:
+	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules_install
+
 clean:
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) clean
 
@@ -42,4 +45,4 @@ local:
 local-clean:
 	$(call local_make,clean)
 
-.PHONY: all clean local local-clean
+.PHONY: all modules_install clean local local-clean

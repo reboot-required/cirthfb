@@ -36,11 +36,15 @@
 *.x86_64
 *.hex
 
+cirthfbd
+render_test
+
 # Debug files
 *.dSYM/
 *.su
 *.idb
 *.pdb
+*.pbm
 
 # Kernel Module Compile Results
 *.mod*

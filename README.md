@@ -8,7 +8,7 @@
 
 A Linux framebuffer driver for the Waveshare 2.13" e-ink display HAT (V4), targeting the Raspberry Pi Zero 2W.
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![License: GPL 2.0](https://img.shields.io/badge/License-GPL%202.0-green.svg)
 
 Named after the Cirth, the runic script of Middle-earth, carved in stone and readable without power or light. Like those runes, this framebuffer driver renders information onto e-ink.
 
@@ -125,4 +125,4 @@ For a fully automated build and image that loads `cirthfb` at boot, see the [cir
 
 ## License
 
-MIT — see [LICENSE](./LICENSE)
+GPL 2.0 — see [LICENSE](./LICENSE)

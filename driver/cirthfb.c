@@ -499,7 +499,7 @@ static const struct of_device_id cirthfb_of_match[] = {
 MODULE_DEVICE_TABLE(of, cirthfb_of_match);
 
 static const struct spi_device_id cirthfb_spi_id[] = {
-	{ "waveshare_epd2in13v4", 0 },
+	{ "waveshare,epd2in13v4", 0 },
 	{ }
 };
 MODULE_DEVICE_TABLE(spi, cirthfb_spi_id);

@@ -26,11 +26,10 @@ if [ ! -d "$KDIR" ]; then
 fi
 
 echo "==> building kernel module (KDIR=$KDIR)"
-make -s clean
-make -s KDIR="$KDIR"
+make -s -C "$KDIR" M="$(pwd)" modules
 [ -f cirthfb.ko ] || fail "cirthfb.ko not produced after make"
 echo "   cirthfb.ko built OK ($(du -h cirthfb.ko | cut -f1))"
 
-make -s clean
+make -s -C "$KDIR" M="$(pwd)" clean
 
 echo "==> all checks passed"

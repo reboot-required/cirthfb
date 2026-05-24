@@ -457,7 +457,7 @@ static int cirthfb_probe(struct spi_device *spi)
 	info->var          = cirthfb_var;
 	info->fbops        = &cirthfb_ops;
 	info->par          = priv;
-	info->flags        = FBINFO_DEFAULT;
+	info->flags        = 0;
 
 	priv->info = info;
 

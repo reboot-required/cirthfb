@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define FB_DEV           "/dev/fb0"
+#define FB_DEV           "/dev/fb1"
 #define DEFAULT_INTERVAL  30
 
 static volatile sig_atomic_t g_running = 1;

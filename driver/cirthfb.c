@@ -41,6 +41,10 @@
 #define CIRTHFB_STRIDE   ((CIRTHFB_XRES + 7) / 8)         /* 32 bytes/row */
 #define CIRTHFB_SMEM_LEN (CIRTHFB_STRIDE * CIRTHFB_YRES)  /* 3904 bytes  */
 
+/* EPD RAM geometry (portrait: 122 wide × 250 tall) — differs from FB */
+#define EPD_STRIDE       ((CIRTHFB_YRES + 7) / 8)         /* 16 bytes/row */
+#define EPD_BUF_LEN      (CIRTHFB_XRES * EPD_STRIDE)      /* 4000 bytes  */
+
 /* Linux GPIO numbers: gpiochip base (512 on Pi Zero 2W / Scarthgap) + BCM pin */
 static int dc_gpio   = 537; /* BCM 25 */
 static int rst_gpio  = 529; /* BCM 17 */
@@ -168,12 +172,12 @@ static int epd_init_display(struct cirthfb_dev *priv)
 	ret = epd_dat(priv, 0x03);
 	if (ret) return ret;
 
-	/* RAM X address window: bytes 0 … CIRTHFB_STRIDE-1 */
+	/* RAM X address window: bytes 0 … EPD_STRIDE-1 (16 bytes = 122 px) */
 	ret = epd_cmd(priv, EPD_CMD_SET_RAMX_ADDR);
 	if (ret) return ret;
 	ret = epd_dat(priv, 0x00);
 	if (ret) return ret;
-	ret = epd_dat(priv, CIRTHFB_STRIDE - 1);
+	ret = epd_dat(priv, EPD_STRIDE - 1);
 	if (ret) return ret;
 
 	/* RAM Y address window: rows 0 … CIRTHFB_XRES-1 */
@@ -244,18 +248,18 @@ static int epd_clear_to_white(struct cirthfb_dev *priv)
 	u8 *white;
 	int ret;
 
-	white = kmalloc(CIRTHFB_SMEM_LEN, GFP_KERNEL);
+	white = kmalloc(EPD_BUF_LEN, GFP_KERNEL);
 	if (!white)
 		return -ENOMEM;
-	memset(white, 0xFF, CIRTHFB_SMEM_LEN);
+	memset(white, 0xFF, EPD_BUF_LEN);
 
 	ret = epd_cmd(priv, EPD_CMD_WRITE_BW_RAM);
 	if (!ret)
-		ret = epd_dat_buf(priv, white, CIRTHFB_SMEM_LEN);
+		ret = epd_dat_buf(priv, white, EPD_BUF_LEN);
 	if (!ret)
 		ret = epd_cmd(priv, EPD_CMD_WRITE_RED_RAM);
 	if (!ret)
-		ret = epd_dat_buf(priv, white, CIRTHFB_SMEM_LEN);
+		ret = epd_dat_buf(priv, white, EPD_BUF_LEN);
 
 	kfree(white);
 
@@ -302,10 +306,10 @@ static int cirthfb_flush(struct fb_info *info)
 	u8 *epd_buf;
 	int ret, x, y, col, row, epd_byte, pixel;
 
-	epd_buf = kmalloc(CIRTHFB_SMEM_LEN, GFP_KERNEL);
+	epd_buf = kmalloc(EPD_BUF_LEN, GFP_KERNEL);
 	if (!epd_buf)
 		return -ENOMEM;
-	memset(epd_buf, 0xFF, CIRTHFB_SMEM_LEN);
+	memset(epd_buf, 0xFF, EPD_BUF_LEN);
 
 	for (y = 0; y < CIRTHFB_YRES; y++) {
 		for (x = 0; x < CIRTHFB_XRES; x++) {
@@ -313,7 +317,7 @@ static int cirthfb_flush(struct fb_info *info)
 
 			col      = y;
 			row      = CIRTHFB_XRES - 1 - x;
-			epd_byte = row * CIRTHFB_STRIDE + col / 8;
+			epd_byte = row * EPD_STRIDE + col / 8;
 			if (pixel)
 				epd_buf[epd_byte] |=  (1u << (7 - (col % 8)));
 			else
@@ -324,7 +328,7 @@ static int cirthfb_flush(struct fb_info *info)
 	mutex_lock(&priv->lock);
 	ret = epd_cmd(priv, EPD_CMD_WRITE_BW_RAM);
 	if (!ret)
-		ret = epd_dat_buf(priv, epd_buf, CIRTHFB_SMEM_LEN);
+		ret = epd_dat_buf(priv, epd_buf, EPD_BUF_LEN);
 	if (!ret)
 		ret = epd_turn_on_display(priv);
 	mutex_unlock(&priv->lock);
@@ -499,7 +503,7 @@ static const struct of_device_id cirthfb_of_match[] = {
 MODULE_DEVICE_TABLE(of, cirthfb_of_match);
 
 static const struct spi_device_id cirthfb_spi_id[] = {
-	{ "waveshare_epd2in13v4", 0 },
+	{ "epd2in13v4", 0 },
 	{ }
 };
 MODULE_DEVICE_TABLE(spi, cirthfb_spi_id);

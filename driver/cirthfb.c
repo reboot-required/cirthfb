@@ -31,8 +31,8 @@
 #include <linux/gpio/consumer.h>
 #include <linux/delay.h>
 #include <linux/mutex.h>
-#include <linux/vmalloc.h>
 #include <linux/slab.h>
+#include <linux/io.h>
 #include <linux/fb.h>
 
 /* Linux framebuffer geometry (landscape: 250 wide × 122 tall, 1 bpp) */
@@ -446,9 +446,9 @@ static int cirthfb_probe(struct spi_device *spi)
 		return -ENOMEM;
 	}
 
-	info->screen_base = vzalloc(CIRTHFB_SMEM_LEN);
+	info->screen_base = kzalloc(CIRTHFB_SMEM_LEN, GFP_KERNEL);
 	if (!info->screen_base) {
-		pr_err("cirthfb: vzalloc(%u) failed\n", CIRTHFB_SMEM_LEN);
+		pr_err("cirthfb: kzalloc(%u) failed\n", CIRTHFB_SMEM_LEN);
 		framebuffer_release(info);
 		return -ENOMEM;
 	}
@@ -456,8 +456,9 @@ static int cirthfb_probe(struct spi_device *spi)
 	/* Mirror the all-white state left by epd_clear_to_white */
 	memset(info->screen_base, 0xFF, CIRTHFB_SMEM_LEN);
 
-	info->fix          = cirthfb_fix;
-	info->fix.smem_len = CIRTHFB_SMEM_LEN; /* smem_start stays 0: vzalloc has no phys addr */
+	info->fix            = cirthfb_fix;
+	info->fix.smem_len   = CIRTHFB_SMEM_LEN;
+	info->fix.smem_start = (unsigned long)virt_to_phys(info->screen_base);
 	info->var          = cirthfb_var;
 	info->fbops        = &cirthfb_ops;
 	info->par          = priv;
@@ -468,7 +469,7 @@ static int cirthfb_probe(struct spi_device *spi)
 	ret = register_framebuffer(info);
 	if (ret) {
 		pr_err("cirthfb: register_framebuffer failed: %d\n", ret);
-		vfree(info->screen_base);
+		kfree(info->screen_base);
 		framebuffer_release(info);
 		return ret;
 	}
@@ -484,7 +485,7 @@ static void cirthfb_remove(struct spi_device *spi)
 
 	if (priv->info) {
 		unregister_framebuffer(priv->info);
-		vfree(priv->info->screen_base);
+		kfree(priv->info->screen_base);
 		framebuffer_release(priv->info);
 	}
 	mutex_destroy(&priv->lock);

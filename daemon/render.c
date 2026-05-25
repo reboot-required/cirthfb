@@ -80,7 +80,7 @@ void set_pixel(uint8_t *fb, int x, int y, int v)
     if (!fb || x < 0 || x >= FB_WIDTH || y < 0 || y >= FB_HEIGHT)
         return;
 
-    int byte_idx = y * (FB_WIDTH / 8) + x / 8;
+    int byte_idx = y * FB_STRIDE + x / 8;
     int bit      = 7 - (x % 8);
 
     if (v)
@@ -102,7 +102,7 @@ void draw_char(uint8_t *fb, int x, int y, char c)
             int py = y + row;
             if (px >= FB_WIDTH || py >= FB_HEIGHT)
                 continue;
-            int v = (glyph[col] >> (7 - row)) & 1;
+            int v = !((glyph[col] >> (7 - row)) & 1);
             set_pixel(fb, px, py, v);
         }
     }

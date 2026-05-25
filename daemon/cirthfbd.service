@@ -1,0 +1,12 @@
+[Unit]
+Description=Cirthfb e-ink display daemon
+After=dev-fb0.device
+Requires=dev-fb0.device
+
+[Service]
+ExecStart=/usr/bin/cirthfbd
+Restart=on-failure
+EnvironmentFile=-/etc/default/cirthfbd
+
+[Install]
+WantedBy=multi-user.target

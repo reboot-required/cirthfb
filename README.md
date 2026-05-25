@@ -8,7 +8,7 @@
 
 A Linux framebuffer driver for the Waveshare 2.13" e-ink display HAT (V4), targeting the Raspberry Pi Zero 2W.
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![License: GPL 2.0](https://img.shields.io/badge/License-GPL%202.0-green.svg)
 
 Named after the Cirth, the runic script of Middle-earth, carved in stone and readable without power or light. Like those runes, this framebuffer driver renders information onto e-ink.
 
@@ -18,6 +18,47 @@ Named after the Cirth, the runic script of Middle-earth, carved in stone and rea
 
 - **`cirthfb.ko`** — out-of-tree Linux kernel module, implements the SPI and framebuffer subsystem interface
 - **`cirthfbd`** — userspace daemon, reads system metrics and writes rendered frames to `/dev/fb0`
+
+---
+
+## How it works
+
+`cirthfbd` and `cirthfb.ko` share `/dev/fb0` as a 1 bpp shadow buffer in kernel RAM. Neither component pushes pixels to the display on every write — a full SPI transfer is triggered explicitly once per update cycle.
+
+### Update cycle (every 30 s by default)
+
+```
+cirthfbd (userspace)
+├── render_clear()        writes 0xFF into the mmap'd shadow buffer
+├── draw_string() ×4      sets pixel bits in the shadow buffer
+│                         (all RAM only — no SPI, no display update yet)
+└── render_flush()
+        │
+        └── ioctl(fb_fd, FBIO_WAITFORVSYNC, 0)
+                │
+                │  syscall → VFS → fbmem.c
+                │  case FBIO_WAITFORVSYNC:
+                │      info->fbops->fb_sync(info)
+                │
+                └── cirthfb_flush()  [cirthfb.ko]
+                        ├── rotates buffer 90° CW  (landscape FB → portrait display)
+                        └── SPI transfer → Waveshare EPD2in13V4
+```
+
+### Why `FBIO_WAITFORVSYNC`?
+
+The Linux framebuffer subsystem routes `ioctl(FBIO_WAITFORVSYNC)` to whichever function the driver registered as `fb_ops.fb_sync`. `cirthfb.ko` registers `cirthfb_flush` there:
+
+```c
+static const struct fb_ops cirthfb_ops = {
+    .fb_sync = cirthfb_flush,
+    ...
+};
+```
+
+`fbmem.c` knows nothing about SPI or e-ink — it calls `fb_sync` blindly. The name "wait for vsync" is a misfit for e-ink (there is no vsync), but semantically it means "make the display consistent with the buffer", which is exactly what is needed here.
+
+Direct `write()` calls on `/dev/fb0` also trigger a flush via `fb_ops.fb_write`. Pixel writes through `mmap` (as `cirthfbd` uses) do not — the flush only happens when `render_flush()` calls the ioctl explicitly.
 
 ---
 
@@ -125,4 +166,4 @@ For a fully automated build and image that loads `cirthfb` at boot, see the [cir
 
 ## License
 
-MIT — see [LICENSE](./LICENSE)
+GPL 2.0 — see [LICENSE](./LICENSE)

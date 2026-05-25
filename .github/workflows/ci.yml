@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - '*'
+    tags-ignore:
+      - '*'
+  pull_request:
+
+jobs:
+  daemon-test:
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: daemon
+    steps:
+      - uses: actions/checkout@v4
+      - name: run daemon tests
+        run: bash test_daemon.sh
+
+  driver-test:
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: driver
+    steps:
+      - uses: actions/checkout@v4
+      - name: run driver tests
+        run: bash test_driver.sh

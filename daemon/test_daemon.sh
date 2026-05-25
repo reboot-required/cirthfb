@@ -4,7 +4,7 @@ set -euo pipefail
 DAEMON=./cirthfbd
 RENDER_TEST_BIN=./render_test
 FAKE_FB=/tmp/fake_fb_$$
-FB_SIZE=3782   # (250 / 8) * 122
+FB_SIZE=3904   # ceil(250/8) * 122 = 32 * 122
 
 cleanup() {
     rm -f "$FAKE_FB"
@@ -88,17 +88,18 @@ echo "==> verifying four text rows (y=4,20,36,52)"
 python3 - "$FAKE_FB" <<'EOF'
 import sys
 
-ROW_BYTES = 31   # 248 pixels / 8
+ROW_BYTES = 32   # ceil(250/8) — matches FB_STRIDE
+FONT_H    = 8
 TEXT_ROWS = [4, 20, 36, 52]
 
 with open(sys.argv[1], 'rb') as f:
     data = f.read()
 
 for y in TEXT_ROWS:
-    row_start = y * ROW_BYTES
-    row = data[row_start: row_start + ROW_BYTES]
-    if all(b == 0xFF for b in row):
-        print(f"FAIL: text row y={y} is blank", file=sys.stderr)
+    block_start = y * ROW_BYTES
+    block = data[block_start: block_start + FONT_H * ROW_BYTES]
+    if all(b == 0xFF for b in block):
+        print(f"FAIL: text block y={y}..{y+FONT_H-1} is blank", file=sys.stderr)
         sys.exit(1)
     print(f"   y={y:2d}: ok")
 EOF

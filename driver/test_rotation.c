@@ -4,7 +4,7 @@
  * cirthfb registers a landscape framebuffer (XRES=250 wide, YRES=122 tall)
  * and rotates it 90° CW before sending pixels to the SSD1675 controller.
  *
- * Transform:  FB pixel (x, y)  →  EPD col = y,  row = XRES − 1 − x
+ * Transform:  FB pixel (x, y)  →  EPD col = y,  row = x
  *
  * Source layout (landscape, 1 bpp MSB-first):
  *   stride = (XRES + 7) / 8 = 32 bytes/row
@@ -54,7 +54,7 @@ static void rotate_90cw(const uint8_t *src, uint8_t *epd)
         for (int x = 0; x < XRES; x++) {
             int pixel = src_get(src, x, y);
             int col   = y;
-            int row   = XRES - 1 - x;
+            int row   = x;
             epd_set(epd, col, row, pixel);
         }
     }
@@ -101,18 +101,18 @@ static void test_all_white(void)
 }
 
 /* FB corner pixels and their expected EPD positions:
- *   FB(0,0)           → EPD col=0,        row=XRES-1=249
- *   FB(XRES-1, 0)     → EPD col=0,        row=0
- *   FB(0, YRES-1)     → EPD col=YRES-1=121, row=XRES-1=249
- *   FB(XRES-1, YRES-1)→ EPD col=YRES-1=121, row=0
+ *   FB(0,0)            → EPD col=0,          row=0
+ *   FB(XRES-1, 0)      → EPD col=0,          row=XRES-1=249
+ *   FB(0, YRES-1)      → EPD col=YRES-1=121, row=0
+ *   FB(XRES-1, YRES-1) → EPD col=YRES-1=121, row=XRES-1=249
  */
 static void test_corners(void)
 {
     struct { int fx, fy, ec, er; const char *name; } cases[] = {
-        {      0,      0,         0, XRES-1, "FB(0,0) → EPD(0,249)"             },
-        { XRES-1,      0,         0,      0, "FB(249,0) → EPD(0,0)"             },
-        {      0, YRES-1,    YRES-1, XRES-1, "FB(0,121) → EPD(121,249)"         },
-        { XRES-1, YRES-1,    YRES-1,      0, "FB(249,121) → EPD(121,0)"         },
+        {      0,      0,         0,      0, "FB(0,0) → EPD(0,0)"               },
+        { XRES-1,      0,         0, XRES-1, "FB(249,0) → EPD(0,249)"           },
+        {      0, YRES-1,    YRES-1,      0, "FB(0,121) → EPD(121,0)"           },
+        { XRES-1, YRES-1,    YRES-1, XRES-1, "FB(249,121) → EPD(121,249)"       },
     };
 
     for (size_t i = 0; i < sizeof(cases)/sizeof(cases[0]); i++) {
@@ -146,7 +146,7 @@ static void test_single_pixel_count(void)
 static void test_column_maps_to_epd_row(void)
 {
     /* A full black column at x=0 in the source should become
-     * a full black EPD row at row=XRES-1=249.  */
+     * a full black EPD row at row=0.  */
     memset(src, 0xFF, SRC_SIZE);
     for (int y = 0; y < YRES; y++) {
         src[y * SRC_STRIDE] &= 0x7F; /* clear bit 7 of byte 0 = pixel x=0 */
@@ -155,9 +155,9 @@ static void test_column_maps_to_epd_row(void)
 
     int all_black = 1;
     for (int col = 0; col < YRES; col++) {
-        if (epd_get(epd, col, XRES-1) != 0) { all_black = 0; break; }
+        if (epd_get(epd, col, 0) != 0) { all_black = 0; break; }
     }
-    CHECK(all_black, "source column x=0 → EPD row 249 is all black");
+    CHECK(all_black, "source column x=0 → EPD row 0 is all black");
 }
 
 static void test_row_maps_to_epd_column(void)

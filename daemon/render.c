@@ -4,8 +4,6 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <linux/fb.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
@@ -58,8 +56,8 @@ void render_clear(void)
 
 void render_flush(void)
 {
-    if (fb_fd >= 0)
-        ioctl(fb_fd, FBIO_WAITFORVSYNC, 0);
+    if (fb_fd >= 0 && fb_buf != MAP_FAILED)
+        pwrite(fb_fd, fb_buf, FB_SIZE, 0);
 }
 
 uint8_t *render_fb(void)
@@ -80,7 +78,7 @@ void set_pixel(uint8_t *fb, int x, int y, int v)
     if (!fb || x < 0 || x >= FB_WIDTH || y < 0 || y >= FB_HEIGHT)
         return;
 
-    int byte_idx = y * (FB_WIDTH / 8) + x / 8;
+    int byte_idx = y * FB_STRIDE + x / 8;
     int bit      = 7 - (x % 8);
 
     if (v)
@@ -102,7 +100,7 @@ void draw_char(uint8_t *fb, int x, int y, char c)
             int py = y + row;
             if (px >= FB_WIDTH || py >= FB_HEIGHT)
                 continue;
-            int v = (glyph[col] >> (7 - row)) & 1;
+            int v = !((glyph[col] >> (7 - row)) & 1);
             set_pixel(fb, px, py, v);
         }
     }

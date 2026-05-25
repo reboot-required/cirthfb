@@ -10,7 +10,8 @@
 #ifndef FB_HEIGHT
 #define FB_HEIGHT 122
 #endif
-#define FB_SIZE   (FB_WIDTH / 8 * FB_HEIGHT)
+#define FB_STRIDE ((FB_WIDTH + 7) / 8)
+#define FB_SIZE   (FB_STRIDE * FB_HEIGHT)
 
 /* Device layer — manage the mmap'd framebuffer */
 int       render_open(const char *dev);

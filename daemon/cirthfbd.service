@@ -1,11 +1,12 @@
 [Unit]
 Description=Cirthfb e-ink display daemon
-After=dev-fb0.device
-Requires=dev-fb0.device
+After=systemd-modules-load.service
 
 [Service]
+ExecStartPre=/bin/sh -c 'i=0; until [ -c /dev/fb1 ]; do sleep 0.5; i=$((i+1)); [ $i -gt 60 ] && exit 1; done'
 ExecStart=/usr/bin/cirthfbd
 Restart=on-failure
+RestartSec=2
 EnvironmentFile=-/etc/default/cirthfbd
 
 [Install]

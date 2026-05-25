@@ -253,13 +253,21 @@ static int epd_clear_to_white(struct cirthfb_dev *priv)
 		return -ENOMEM;
 	memset(white, 0xFF, EPD_BUF_LEN);
 
-	ret = epd_cmd(priv, EPD_CMD_WRITE_BW_RAM);
-	if (!ret)
-		ret = epd_dat_buf(priv, white, EPD_BUF_LEN);
-	if (!ret)
-		ret = epd_cmd(priv, EPD_CMD_WRITE_RED_RAM);
-	if (!ret)
-		ret = epd_dat_buf(priv, white, EPD_BUF_LEN);
+	ret = epd_cmd(priv, EPD_CMD_SET_RAMX_COUNTER);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_cmd(priv, EPD_CMD_SET_RAMY_COUNTER);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_cmd(priv, EPD_CMD_WRITE_BW_RAM);
+	if (!ret) ret = epd_dat_buf(priv, white, EPD_BUF_LEN);
+
+	if (!ret) ret = epd_cmd(priv, EPD_CMD_SET_RAMX_COUNTER);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_cmd(priv, EPD_CMD_SET_RAMY_COUNTER);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_cmd(priv, EPD_CMD_WRITE_RED_RAM);
+	if (!ret) ret = epd_dat_buf(priv, white, EPD_BUF_LEN);
 
 	kfree(white);
 
@@ -326,11 +334,14 @@ static int cirthfb_flush(struct fb_info *info)
 	}
 
 	mutex_lock(&priv->lock);
-	ret = epd_cmd(priv, EPD_CMD_WRITE_BW_RAM);
-	if (!ret)
-		ret = epd_dat_buf(priv, epd_buf, EPD_BUF_LEN);
-	if (!ret)
-		ret = epd_turn_on_display(priv);
+	ret = epd_cmd(priv, EPD_CMD_SET_RAMX_COUNTER);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_cmd(priv, EPD_CMD_SET_RAMY_COUNTER);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_dat(priv, 0x00);
+	if (!ret) ret = epd_cmd(priv, EPD_CMD_WRITE_BW_RAM);
+	if (!ret) ret = epd_dat_buf(priv, epd_buf, EPD_BUF_LEN);
+	if (!ret) ret = epd_turn_on_display(priv);
 	mutex_unlock(&priv->lock);
 	kfree(epd_buf);
 	return ret;

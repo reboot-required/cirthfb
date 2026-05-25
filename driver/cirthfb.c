@@ -302,9 +302,10 @@ static const struct fb_fix_screeninfo cirthfb_fix = {
 /* ------------------------------------------------------------------ */
 
 /*
- * Rotate the landscape framebuffer 90° CCW into the portrait EPD buffer.
- * FB pixel (x, y) → EPD col = CIRTHFB_YRES-1-y, row = x.
+ * Rotate the landscape framebuffer 90° CW into the portrait EPD buffer.
+ * FB pixel (x, y) → EPD col = y, row = (CIRTHFB_XRES − 1 − x).
  * Both formats are 1 bpp MSB-first; 1 = white.
+ * If the image appears mirrored, swap to: col = CIRTHFB_YRES-1-y, row = x.
  */
 static int cirthfb_flush(struct fb_info *info)
 {
@@ -322,7 +323,7 @@ static int cirthfb_flush(struct fb_info *info)
 		for (x = 0; x < CIRTHFB_XRES; x++) {
 			pixel = (src[y * CIRTHFB_STRIDE + x / 8] >> (7 - (x % 8))) & 1;
 
-			col      = CIRTHFB_YRES - 1 - y;
+			col      = y;
 			row      = x;
 			epd_byte = row * EPD_STRIDE + col / 8;
 			if (pixel)

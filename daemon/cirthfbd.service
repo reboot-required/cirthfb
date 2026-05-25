@@ -1,5 +1,6 @@
 [Unit]
 Description=Cirthfb e-ink display daemon
+After=systemd-modules-load.service
 
 [Service]
 ExecStartPre=/bin/sh -c 'i=0; until [ -c /dev/fb1 ]; do sleep 0.5; i=$((i+1)); [ $i -gt 60 ] && exit 1; done'

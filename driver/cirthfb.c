@@ -303,9 +303,8 @@ static const struct fb_fix_screeninfo cirthfb_fix = {
 
 /*
  * Rotate the landscape framebuffer 90° CW into the portrait EPD buffer.
- * FB pixel (x, y) → EPD col = y, row = (CIRTHFB_XRES − 1 − x).
+ * FB pixel (x, y) → EPD col = y, row = x.
  * Both formats are 1 bpp MSB-first; 1 = white.
- * If the image appears mirrored, swap to: col = CIRTHFB_YRES-1-y, row = x.
  */
 static int cirthfb_flush(struct fb_info *info)
 {
@@ -523,7 +522,6 @@ MODULE_DEVICE_TABLE(spi, cirthfb_spi_id);
 static struct spi_driver cirthfb_spi_driver = {
 	.driver = {
 		.name           = "cirthfb",
-		.owner          = THIS_MODULE,
 		.of_match_table = cirthfb_of_match,
 	},
 	.probe    = cirthfb_probe,

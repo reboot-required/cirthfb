@@ -81,7 +81,7 @@ EOF
 # ── 5. Check the four expected text rows are non-blank ──────────────────────
 #
 # draw_string() places lines at y = 4, 20, 36, 52.
-# Each row in the 1bpp buffer is FB_WIDTH/8 = 31 bytes.
+# Each row in the 1bpp buffer is ceil(FB_WIDTH/8) = 32 bytes.
 
 echo "==> verifying four text rows (y=4,20,36,52)"
 

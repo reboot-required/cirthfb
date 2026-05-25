@@ -4,8 +4,6 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <linux/fb.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
@@ -58,8 +56,8 @@ void render_clear(void)
 
 void render_flush(void)
 {
-    if (fb_fd >= 0)
-        ioctl(fb_fd, FBIO_WAITFORVSYNC, 0);
+    if (fb_fd >= 0 && fb_buf != MAP_FAILED)
+        pwrite(fb_fd, fb_buf, FB_SIZE, 0);
 }
 
 uint8_t *render_fb(void)

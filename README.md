@@ -17,13 +17,13 @@ Named after the Cirth, the runic script of Middle-earth, carved in stone and rea
 ## Components
 
 - **`cirthfb.ko`** — out-of-tree Linux kernel module, implements the SPI and framebuffer subsystem interface
-- **`cirthfbd`** — userspace daemon, reads system metrics and writes rendered frames to `/dev/fb0`
+- **`cirthfbd`** — userspace daemon, reads system metrics and writes rendered frames to `/dev/fb1`
 
 ---
 
 ## How it works
 
-`cirthfbd` and `cirthfb.ko` share `/dev/fb0` as a 1 bpp shadow buffer in kernel RAM. Neither component pushes pixels to the display on every write — a full SPI transfer is triggered explicitly once per update cycle.
+`cirthfbd` and `cirthfb.ko` share `/dev/fb1` as a 1 bpp shadow buffer in kernel RAM. Neither component pushes pixels to the display on every write — a full SPI transfer is triggered explicitly once per update cycle.
 
 ### Update cycle (every 30 s by default)
 
@@ -34,31 +34,24 @@ cirthfbd (userspace)
 │                         (all RAM only — no SPI, no display update yet)
 └── render_flush()
         │
-        └── ioctl(fb_fd, FBIO_WAITFORVSYNC, 0)
+        └── pwrite(fb_fd, fb_buf, FB_SIZE, 0)
                 │
-                │  syscall → VFS → fbmem.c
-                │  case FBIO_WAITFORVSYNC:
-                │      info->fbops->fb_sync(info)
+                │  syscall → VFS → fbmem.c → cirthfb_write()
+                │  copy_from_user() → screen_base
                 │
                 └── cirthfb_flush()  [cirthfb.ko]
+                        ├── resets EPD RAM address counter to (0, 0)
                         ├── rotates buffer 90° CW  (landscape FB → portrait display)
                         └── SPI transfer → Waveshare EPD2in13V4
 ```
 
-### Why `FBIO_WAITFORVSYNC`?
+### Why `pwrite()` for flush?
 
-The Linux framebuffer subsystem routes `ioctl(FBIO_WAITFORVSYNC)` to whichever function the driver registered as `fb_ops.fb_sync`. `cirthfb.ko` registers `cirthfb_flush` there:
+`cirthfbd` renders into a `mmap`'d view of the framebuffer. Writes through `mmap` reach the kernel's `screen_base` only after `copy_from_user` — there is no automatic SPI transfer on pixel writes.
 
-```c
-static const struct fb_ops cirthfb_ops = {
-    .fb_sync = cirthfb_flush,
-    ...
-};
-```
+`pwrite()` at offset 0 routes through `cirthfb_write` → `cirthfb_flush`, which resets the EPD RAM address counter, rotates the buffer, and sends the full frame over SPI. It also handles ARM cache coherency via `copy_from_user`, ensuring that CPU-cached mmap writes are visible to the kernel before the SPI transfer starts.
 
-`fbmem.c` knows nothing about SPI or e-ink — it calls `fb_sync` blindly. The name "wait for vsync" is a misfit for e-ink (there is no vsync), but semantically it means "make the display consistent with the buffer", which is exactly what is needed here.
-
-Direct `write()` calls on `/dev/fb0` also trigger a flush via `fb_ops.fb_write`. Pixel writes through `mmap` (as `cirthfbd` uses) do not — the flush only happens when `render_flush()` calls the ioctl explicitly.
+`ioctl(FBIO_WAITFORVSYNC)` was the original flush mechanism but delegates to `fb_ioctl` in Linux 6.x rather than `fb_sync`, making it a no-op for drivers that do not implement `fb_ioctl`.
 
 ---
 
@@ -96,16 +89,14 @@ Direct `write()` calls on `/dev/fb0` also trigger a flush via `fb_ops.fb_write`.
 Build against an external kernel tree or a sourced SDK environment:
 
 ```bash
-make KERNELDIR=/path/to/rpi-kernel-build
+make KERNEL_SRC=/path/to/rpi-kernel-build
 ```
 
-Build directly against a local Yocto work tree (no arguments needed if `YOCTO_BUILD` is set correctly in the Makefile):
+Clean with:
 
 ```bash
-make local
+make KERNEL_SRC=/path/to/rpi-kernel-build clean
 ```
-
-Clean either way by substituting `clean` or `local-clean` respectively.
 
 #### Module parameters
 
@@ -115,12 +106,11 @@ Override GPIO numbers at load time if they differ from the defaults:
 insmod cirthfb.ko dc_gpio=537 rst_gpio=529 busy_gpio=536
 ```
 
-| Parameter   | Default              | Description      |
-|-------------|----------------------|------------------|
-| `dc_gpio`   | 537                  | DC pin (BCM 25)  |
-| `rst_gpio`  | 529                  | RST pin (BCM 17) |
-| `busy_gpio` | 536                  | BUSY pin (BCM 24)|
-| `display`   | `waveshare2in13v4`   | Display type     |
+| Parameter   | Default | Description      |
+|-------------|---------|------------------|
+| `dc_gpio`   | 537     | DC pin (BCM 25)  |
+| `rst_gpio`  | 529     | RST pin (BCM 17) |
+| `busy_gpio` | 536     | BUSY pin (BCM 24)|
 
 ---
 
@@ -147,7 +137,7 @@ echo cirthfb > /sys/bus/spi/devices/spi0.0/driver_override
 echo spi0.0 > /sys/bus/spi/drivers/cirthfb/bind
 ```
 
-On successful probe the display initialises, clears to white, and renders a checkerboard test pattern.
+On successful probe the display initialises and clears to white.
 
 ### Unbind
 
@@ -160,7 +150,7 @@ echo > /sys/bus/spi/devices/spi0.0/driver_override
 
 ## Yocto Integration
 
-For a fully automated build and image that loads `cirthfb` at boot, see the [cirthfb-yocto](https://github.com/reboot-required/cirthfb-yocto) repository.
+For a fully automated build and image that loads `cirthfb` at boot via Device Tree overlay, see the [cirthfb-yocto](https://github.com/reboot-required/cirthfb-yocto) repository.
 
 ---
 
